@@ -1,0 +1,24 @@
+{
+  "name": "realtime-chat-app-twitch-sample",
+  "version": "1.4.0",
+  "description": "This is a real-time chat application built with Node.js, Express, and Socket.io.It integrates with the Twitch API to fetch user profile images, display names, and emotes dynamically.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "Node.js",
+    "socket.io",
+    "realtime chat"
+  ],
+  "author": "tetchan",
+  "license": "ISC",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "csurf": "^1.11.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-validator": "^7.2.1",
+    "socket.io": "^4.8.1"
+  }
+}

@@ -1,0 +1,6 @@
+# macOS の隠しファイル
+.DS_Store
+# Node.js のモジュール
+node_modules/
+# .env
+.env

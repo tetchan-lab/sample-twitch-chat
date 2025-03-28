@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="ja">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0 minimum-scale=1.0">
+		<title>Sample Socket.io Chat</title>
+		<style>
+			body {
+				margin: 0;
+				padding-bottom: 3rem;
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+			}
+			body.dark-mode {
+				background-color: #171719;
+				color: white;
+			}
+			header {
+    			display: flex;
+			    border-bottom: 1px solid #e1e1e1;
+			}
+			.dark-mode header {
+				border-bottom: 1px solid #2f2f35;
+			}
+			header h1 {
+				padding: 10px;
+				margin: 0 auto;
+				font-size: 16px;
+				font-weight: 400;
+			}
+			button#chat-setting {
+    			background: white;
+    			border: none;
+				margin-right: 10px;
+			}
+			.dark-mode button#chat-setting {
+				background: #171719;
+			}
+			button#chat-setting img {
+    			width: auto;
+    			height: 17px;
+    			padding: 10px;
+			}
+			.dark-mode button#chat-setting img {
+				filter: invert(100%) sepia(0%) saturate(7480%) hue-rotate(318deg) brightness(107%) contrast(105%);
+			}
+			button#chat-setting img:hover {
+    			background: #e5e5e5;
+				border-radius: 6px;
+			}
+			#theme-toggle-container {
+				position: absolute;
+				top: 40px;
+				right: 4px;
+				background: rgba(255, 255, 255, 0.9);
+				padding: 10px;
+				border-radius: 5px;
+				box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+				z-index: 100;
+				width: 200px;
+    			height: 66px;
+			}
+			.dark-mode #theme-toggle-container {
+				background: #1d1d20;
+				color: white;
+				box-shadow: 0px 2px 5px rgb(0, 0, 0);
+			}
+			.flex-box {
+    			display: flex;
+    			margin-bottom: 10px;
+			}
+			label.set-text {
+				flex: 1;  /* テキストの幅を自動で調整 */
+    			padding-left: 5px;
+			}
+			/* チェックボックスがオフのときに <time> タグを非表示にする */
+			#time-toggle:checked + time {
+    			display: none;
+			}
+			/* start switch */
+			/* スイッチ全体のデザイン */
+			.switch {
+				position: relative;
+				display: inline-block;
+				width: 50px;  /* 横長サイズ */
+				height: 24px;
+			}
+			/* チェックボックスを非表示（デザイン用） */
+			.switch input {
+				opacity: 0;
+				width: 0;
+				height: 0;
+			}
+			/* スライダー（スイッチの背景部分） */
+			.slider {
+				position: absolute;
+				cursor: pointer;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background-color: #ccc;  /* オフ時の色 */
+				transition: 0.4s;
+				border-radius: 34px;  /* 角を丸く */
+			}
+			/* 丸い部分（スライドする部分） */
+			.slider::before {
+				position: absolute;
+				content: "";
+				height: 18px;
+				width: 18px;
+				left: 3px;
+				bottom: 3px;
+				background-color: white;
+				transition: 0.4s;
+				border-radius: 50%;
+			}
+			/* ONのときのスタイル（背景色を変更＆スライダー移動） */
+			input:checked + .slider {
+				background-color: #4CAF50;  /* ON時の背景色 */
+			}
+			input:checked + .slider::before {
+				transform: translateX(26px);  /* 丸を右へ移動 */
+			}
+			/* end switch */
+			#chatForm {
+				display: flex;
+				border-top: 1px solid #e5e5e5;
+				padding-top: 10px;
+				padding-bottom: 6px;
+				position: fixed;
+				bottom: 0px;
+				left: 0;
+				right: 0;
+			}
+			.dark-mode #chatForm {
+				border-top: 1px solid #414141;
+			}
+			#chat-name {
+				height: 39px;
+				padding-left: 11px;
+				box-sizing: border-box;
+				border: none;
+				/*border-radius: 2rem;*/
+				background: #efefef;
+				margin: 0px -11px 0px 14px;
+				display: none;
+			}
+			.wrapper {
+				position: relative;
+				width: 100%;
+			}
+			#chatPreview {
+    			width: 100%;
+				height: 39px; /* 高さを調整  必要に応じて変更 */
+				font-size: 16px;
+				box-sizing: border-box;
+				resize: none; /* 手動リサイズ禁止 */
+				line-height: 18px; /* 文字の高さ幅を調整  上下間隔になるのに注意 */
+				padding-top: 11px;
+				padding-left: 18px;
+				padding-right: 18px;
+				overflow-y: hidden; /* スクロールバーを非表示 */
+				border: none;
+				background: #f2f2f2;
+				font-family: sans-serif;
+				border-radius: 2rem;
+				margin-left: 23px;
+				outline: none;
+			}
+			.dark-mode #chatPreview {
+				background: #292929;
+				/*outline: 1px solid #656568;*/
+			}
+			img.chat-emote {
+    			vertical-align: middle;
+    			margin: -6px 2px 0px 4px;
+			}
+			#input {
+				width: 100%;
+				height: 39px; /* 高さを調整  必要に応じて変更 */
+				font-size: 14px;
+				box-sizing: border-box;
+				resize: none; /* 手動リサイズ禁止 */
+				line-height: 18px; /* 文字の高さ幅を調整  上下間隔になるのに注意 */
+				padding-top: 11px;
+				padding-left: 18px;
+				padding-right: 18px;
+				overflow-y: hidden; /* スクロールバーを非表示 */
+				border: none;
+				background: #f2f2f2;
+				font-family: sans-serif;
+				border-radius: 2rem;
+				margin-left: 23px;
+				display: none; /* 完全に隠す */
+			}
+			#input:focus {
+				outline: none;
+			}
+			.emoji-picker {
+				display: none;
+				position: absolute;
+				background: white;
+				border: 1px solid #ddd;
+				border-radius: 8px;
+				padding: 10px;
+				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+				max-width: 372px;
+				max-height: 400px;
+				flex-wrap: wrap;
+				gap: 10px;
+				right: -80px;
+				bottom: 54px;
+				overflow-y: auto;
+			}
+			.dark-mode .emoji-picker {
+				background: #1d1d20;
+				border: 1px solid #1d1d20;
+				box-shadow: 0 4px 6px rgb(0 0 0 / 65%);
+			}
+			.emoji-picker img {
+				width: 28px;
+    			height: 28px;
+    			cursor: pointer;
+    			transition: transform 0.2s;
+			}
+			.emoji-picker img:hover {
+    			transform: scale(1.2);
+			}
+			.emoji {
+				font-size: 28px;
+				cursor: pointer;
+				/*padding: 5px;*/
+				border-radius: 5px;
+				transition: background 0.2s;
+			}
+			.emoji:hover {
+				background: #f0f0f0;
+			}
+			.separator {
+    			width: 100%;
+    			text-align: left;
+    			font-size: 14px;
+				font-weight: bold;
+				margin: 8px 0;
+				padding: 4px 0px;
+				/*border-top: 2px solid #ddd;*/ /* 上に区切り線 */
+  				color: #666;
+			}
+			.dark-mode .separator {
+				background: #171719;
+				color: white;
+			}
+			button.emoji-button {
+				position: absolute;
+				right: -14px;
+				top: 9px;
+				border: none;
+				background: none;
+				/*display: none;*/
+			}
+			/* start カスタムツールチップ（tooltip） */
+			button.emoji-button::after {
+				content: attr(data-title);
+				position: absolute;
+				top: -50px; /* ボタンの上に表示 */
+				left: 50%;
+				transform: translateX(-50%);
+				background: #707070;
+				color: #e9e9e9;
+				padding: 10px 10px;
+				border-radius: 5px;
+				font-size: 12px;
+				white-space: nowrap;
+				opacity: 0;
+				visibility: hidden;
+				transition: opacity 0.2s ease-in-out;
+				pointer-events: none;
+			}
+			/* 吹き出しの下やじるし三角形を作る */
+			button.emoji-button::before {
+				content: "";
+				position: absolute;
+				top: -12px; /* 吹き出しの三角形の位置 */
+				left: 50%;
+				transform: translateX(-50%);
+				border-width: 5px;
+				border-style: solid;
+				border-color: #707070 transparent transparent transparent;
+				opacity: 0;
+				visibility: hidden;
+				transition: opacity 0.2s ease-in-out;
+			}
+			.emoji-button:hover::after,
+			.emoji-button:hover::before {
+				opacity: 1;
+				visibility: visible;
+			}
+			/* end カスタムツールチップ（tooltip） */
+			button.emoji-button > img {
+				width: auto;
+				height: 20px;
+				filter: invert(51%) sepia(3%) saturate(10%) hue-rotate(15deg) brightness(101%) contrast(92%);
+			}
+			.dark-mode button.emoji-button > img {
+				/* #ffffff */
+				filter: invert(100%) sepia(0%) saturate(7480%) hue-rotate(318deg) brightness(107%) contrast(105%);
+				/* #e3e3e3 */
+				filter: invert(99%) sepia(67%) saturate(429%) hue-rotate(195deg) brightness(116%) contrast(78%);
+			}
+            button.send {
+				border: none;
+				background: #ffffff;
+				margin: 0px 18px 0px 30px;
+            }
+			.dark-mode button.send {
+				background: #171719;
+			}
+			button.send > img {
+				/*transform: rotateZ(28deg);*/
+				width: auto;
+				height: 22px;
+				filter: invert(1%) sepia(5%) saturate(145%) hue-rotate(314deg) brightness(93%) contrast(91%);
+				filter: invert(13%) sepia(9%) saturate(19%) hue-rotate(337deg) brightness(93%) contrast(80%);
+				filter: invert(22%) sepia(16%) saturate(4%) hue-rotate(315deg) brightness(102%) contrast(81%);
+			}
+			.dark-mode button.send > img {
+				/* #ffffff */
+				filter: invert(100%) sepia(0%) saturate(7480%) hue-rotate(318deg) brightness(107%) contrast(105%);
+				/* #f3f3f3 */
+				filter: invert(99%) sepia(77%) saturate(20%) hue-rotate(278deg) brightness(110%) contrast(91%);
+				/* #e3e3e3 */
+				filter: invert(99%) sepia(67%) saturate(429%) hue-rotate(195deg) brightness(116%) contrast(78%);
+			}
+			#messages {
+				list-style-type: none;
+				margin: 0 0 23px 0;
+				padding: 0; 
+				position: fixed;
+				width: 100%;
+				top: 52px;
+				bottom: 46px;
+				overflow: auto;
+			}
+			#messages > li:nth-child(odd) {
+				background: #f8f8f8;
+			}
+			.dark-mode #messages > li:nth-child(odd) {
+				background: #171719;
+			}
+			#messages > li {
+				display: flex;
+				position: relative;
+				padding: 0.5rem 1rem;
+				animation: fadeIn 0.3s ease 0s 1 normal;
+			}
+			/* アニメーション */
+			@keyframes fadeIn {
+				0% {
+					opacity: 0;
+					transform: translateY(10px);
+				}
+				100% {
+					opacity: 1;
+				}
+			}
+			li > span > img {
+				width: auto;
+				height: 26px;
+				border-radius: 100%;
+				/*margin: -20px 7px -8px 7px;*/
+			}
+			#messages > li time {
+				font-size: 0.7rem;
+				color: #a8a8a8;
+				padding-right: 6px;
+				display: inline;
+				/* display: none; */
+			}
+			.msg-icon {
+				height: 21px;
+				padding: 0 12px 0px 6px;
+				margin-top: -2px;
+				/* display: none; */
+			}
+			.msg-name {
+				font-size: 12px;
+				font-weight: bold;
+				color: #797979;
+				color: #146512;
+				color: #027523;
+				padding-right: 2px;
+			}
+			.msg-text {
+				font-size: 13px;
+			}
+			.msg-text img {
+    			/* height: 26px; */
+    			margin-bottom: -6px;
+    			margin-top: -10px;
+				/*padding-right: 6px;*/
+			}
+			@media screen and (max-width: 430px) {
+				#input {
+					font-size: 16px;
+				}
+				/*button.emoji-button {
+					display: none;
+				}*/
+				li > span > img {
+					height: 26px;
+				}
+				#messages > li time {
+                    padding-right: 3px;
+					/*display: none;*/
+				}
+				.msg-icon {
+					height: 21px;
+					padding: 0px 10px 0px 0px;
+					margin-top: -2px;
+				}
+				.msg-name {
+					font-size: 12px;
+					padding-right: 2px;
+				}
+				.msg-text {
+					font-size: 13px;
+				}
+			}
+		</style>
+		<style id="emoji-tooltip">
+			.emoji-button:hover::after,
+			.emoji-button:hover::before {
+				opacity: 1;
+				visibility: visible;
+			}
+		</style>
+	</head>
+	<body>
+		<header>
+			<h1>チャット</h1>
+			<button type="button" id="chat-setting">
+				<img src="icon/ellipsis-vertical-solid.svg" alt="setting">
+			</button>
+		</header>
+		<!-- start 設定メニュー -->
+		<div id="theme-toggle-container" style="display: none;">
+			<div class="flex-box">
+				<label for="theme-toggle" class="set-text">☾ ダークテーマ</label>
+				<label class="switch">
+					<input type="checkbox" id="theme-toggle">
+					<span class="slider"></span>
+				</label>
+			</div>
+			<div class="flex-box">
+				<label for="time-toggle" class="set-text">↻ タイムスタンプ</label>
+				<label class="switch">
+					<input type="checkbox" id="time-toggle" checked>
+					<span class="slider"></span>
+				</label>
+			</div>
+		</div>
+		<!-- end 設定メニュー -->
+		<ul id="messages"></ul>
+		<form id="chatForm" action="/submit" method="POST">
+			<input id="chat-name" name="_name" value="sampleサンプル:">
+			<div id="wrapper" class="wrapper">
+				<div id="chatPreview" contenteditable="true"></div>
+				<textarea id="input" name="_message" placeholder="チャット..." autocomplete="off"></textarea>
+                <input type="hidden" name="_csrf" id="csrf-token">
+				<button type="button" id="emoji-button" class="emoji-button" data-title="エモートを追加">
+					<img src="icon/face-smile-regular.svg" alt="😀">
+				</button>
+				<div id="emoji-picker" class="emoji-picker"></div>
+			</div>
+			<button type="submit" class="send">
+				<img src="icon/paper-plane-regular.svg" class="send-img" alt="Send">
+			</button>
+		</form>
+		<script src="/socket.io/socket.io.js"></script>
+		<script>
+			let socket = io();
+			let twitchUserInfo = null; // twitchのユーザー情報を格納するためグローバル変数を用意する
+			const messages = document.getElementById('messages');
+			const input = document.getElementById("input");
+			const form = document.getElementById("chatForm");
+			const chatName = document.getElementById('chat-name');
+			const emojiButton = document.getElementById("emoji-button");
+			const emojiPicker = document.getElementById("emoji-picker");
+			const tooltipStyle = document.getElementById("emoji-tooltip");
+			const sendImg = document.querySelector(".send-img");
+			let isComposing = false; // IME変換中かどうかを判定するフラグ
+			let canSubmit = true; // 送信可能かどうかを管理するフラグ
+
+			const chatPreview = document.getElementById("chatPreview");
+
+			// キーボード入力を同期する
+			chatPreview.addEventListener("input", () => {
+    			input.value = chatPreview.innerHTML; // HTMLをそのまま `textarea` に入れる
+			});
+
+			// ダークテーマのトグルボタンとタイムスタンプのトグルボタンを取得
+			const darkModeToggle = document.getElementById("theme-toggle");
+			const timeToggle = document.getElementById("time-toggle");
+
+			// ページ読み込み時にダークテーマとタイムスタンプの状態を復元
+			document.addEventListener("DOMContentLoaded", () => {
+				// ダークテーマの復元
+				const savedDarkMode = localStorage.getItem("darkModeState");
+    			if (savedDarkMode !== null) {
+        			if (savedDarkMode === "true") {
+            			document.body.classList.add("dark-mode");
+            			darkModeToggle.checked = true;
+        			} else {
+            			document.body.classList.remove("dark-mode");
+            			darkModeToggle.checked = false;
+        			}
+    			}
+				// タイムスタンプの表示/非表示の復元
+				const savedTimeToggle = localStorage.getItem("timeToggleState");
+    			if (savedTimeToggle !== null) {
+        			timeToggle.checked = savedTimeToggle === "true";
+    			}
+			});
+
+			// チャット設定の表示
+			const settingButton = document.getElementById("chat-setting");
+			const menu = document.getElementById("theme-toggle-container");
+			settingButton.addEventListener("click", () => {
+				menu.style.display = menu.style.display === "none" ? "block" : "none";
+				//console.log("✅ 設定メニューを開く:", menu); // デバッグ用
+			});
+
+			// クリックでチャット設定を閉じる
+			document.addEventListener("click", (event) => {
+  				// チャット設定ボタンやメニューをクリックした場合は何もしない
+  				if (!settingButton.contains(event.target) && !menu.contains(event.target)) {
+    				menu.style.display = "none"; // メニューを非表示にする
+  				}
+			});
+
+			// ダークテーマの設定
+			darkModeToggle.addEventListener("change", (event) => {
+				localStorage.setItem("darkModeState", darkModeToggle.checked);
+				//console.log("✅ ダークモードがクリックされた！", event.target.checked); // デバッグ用
+				document.body.classList.toggle("dark-mode", event.target.checked);
+				if (document.body.classList.contains("dark-mode")) {
+					sendImg.style.filter = "invert(99%) sepia(67%) saturate(429%) hue-rotate(195deg) brightness(116%) contrast(78%)";
+				} else {
+					sendImg.style.filter = "invert(22%) sepia(16%) saturate(4%) hue-rotate(315deg) brightness(102%) contrast(81%)";
+				}
+			});
+
+			// スイッチの変更時に タイムスタンプ<time> の表示を更新（最新の <time> を取得）
+			timeToggle.addEventListener("change", (event) => {
+				localStorage.setItem("timeToggleState", timeToggle.checked);
+				//console.log("✅ タイムスタンプがクリックされた！", event.target.checked); // デバッグ用
+				updateTimeVisibility(); // <time> の表示を更新
+			});
+
+			// タイムスタンプ<time> の表示/非表示を更新する関数
+			function updateTimeVisibility() {
+    			const timeElements = document.querySelectorAll("time"); // 最新の <time> を取得
+    			//console.log("📌 現在の <time> 要素数:", timeElements.length); // デバッグ用
+
+				timeElements.forEach(time => {
+					time.style.display = timeToggle.checked ? "inline" : "none";
+					//console.log(`🕒 ${time.textContent} → ${time.style.display}`); // デバッグ用
+				});
+			}
+
+			// メッセージ送信時にも タイムスタンプ<time> の表示を適用
+			function onMessageSent() {
+    			updateTimeVisibility(); // 新しく追加された <time> も対象にする
+			}
+
+			window.onload = async function () {
+    			try {
+        			await Promise.all([
+            			updateCsrfToken(),   // CSRFトークン取得
+            			fetchTwitchUserInfo(), // ユーザー情報取得
+					]);
+					console.log("✅ すべてのデータ取得完了！");
+				} catch (error) {
+					console.error("❌ データ取得中にエラー:", error);
+    			}
+			};
+
+			// ✅ 1. サーバーからユーザー情報を取得
+			async function fetchTwitchUserInfo() {
+				try {
+					const response = await fetch("/twitch/user", {
+						method: "GET",
+						credentials: "include"
+					});
+
+					const data = await response.json();
+
+					twitchUserInfo = data;  // 取得したデータをグローバル変数に保存
+        			//console.log("🎭 Twitchユーザー情報:", twitchUserInfo); // (デバッグ用)
+
+					chatName.value = twitchUserInfo.display_name;
+
+					// 未ログインなら or 有効期限切れなら Twitch 認証ページへリダイレクト！
+					if (data.login_url) {
+						console.warn("⚠️ 未ログイン or トークン期限切れ! Twitch OAuth にリダイレクト！");
+						window.location.href = data.login_url;
+						return;
+					}
+
+				} catch (error) {
+					console.error("❌ ユーザー情報の取得に失敗:", error);
+				}
+			}
+
+			// CSRFトークンを取得してフォームにセットする関数
+			async function updateCsrfToken() {
+				const res = await fetch('/csrf-token');
+				const data = await res.json();
+				document.getElementById('csrf-token').value = data.csrfToken;
+				console.log("✅ New CSRF Token retrieved:", data.csrfToken); // (デバッグ用)
+			}
+			
+			// IME変換開始時にフラグを立てる
+			chatPreview.addEventListener("compositionstart", () => {
+				isComposing = true;
+				canSubmit = false; // 変換中は送信できない
+			});
+			
+			// IME変換確定時にフラグを解除（確定後の入力イベント or キーアップを待つ）
+			chatPreview.addEventListener("compositionend", () => {
+				isComposing = false;
+				// Safari対策: `input` or `keyup` が来るまで `canSubmit` を `false` のままにする
+			});
+
+			// Twitch のエモートを取得する関数（自分用）
+			async function fetchTwitchEmotes() {
+    			try {
+        			const response = await fetch("/twitch/emotes/my", { credentials: "include" });
+        			const data = await response.json();
+
+        			//console.log("📢 `Twitchエモート（自分）` の中身:", data); // デバッグ用
+
+        			// Twitch API のレスポンスからエモート配列を取得
+        			return data.data || []; // `data.data` を返す（なかったら空配列）
+
+    			} catch (error) {
+        			console.error("❌ Twitchエモート取得失敗:", error);
+        			return []; // エラー時は空配列を返す
+    			}
+			}
+
+			// Twitch のエモートを取得する関数（ユーザー用）
+			async function fetchTwitchEmotesYour() {
+    			try {
+        			const response = await fetch("/twitch/emotes/your", { credentials: "include" });
+        			const data = await response.json();
+
+        			//console.log("📢 `Twitchエモート（ユーザー）` の中身:", data); // デバッグ用
+
+        			// Twitch API のレスポンスからエモート配列を取得
+        			return data.data || []; // `data.data` を返す（なかったら空配列）
+
+    			} catch (error) {
+        			console.error("❌ Twitchエモート取得失敗:", error);
+        			return []; // エラー時は空配列を返す
+    			}
+			}
+
+			// Twitch グローバルエモートを取得
+			async function fetchGlobalEmotes() {
+				try {
+					const response = await fetch("/twitch/emotes/global");
+					const data = await response.json();
+					//console.log("🌎 `グローバルエモート` の中身:", data); // デバッグ用
+					return data.data || [];
+				} catch (error) {
+					console.error("❌ グローバルエモートの取得に失敗:", error);
+					return [];
+				}
+			}
+
+			// 表示する絵文字一覧
+			const emojis = ["😌", "😭", "😀", "😁", "😂", "🤣", "😃", "😄", "😅", "😆", "☺️", "😇",
+							"😍", "😡", "😓", "😴", "😨", "🤔", "🥹", "😔", "😉", "😊", "😋", "😎"
+			];
+
+			// 📌 区切り線を追加する関数
+			function addSeparator(labelText) {
+				const separator = document.createElement("div");
+				separator.textContent = labelText; // ラベルを表示
+				separator.classList.add("separator"); // CSSでスタイルをつける
+				emojiPicker.appendChild(separator);
+			}
+
+			// 絵文字ピッカーを生成 **✅ すべてのエモート＆絵文字を統合する関数**
+			async function createEmojiPicker() {
+				emojiPicker.innerHTML = ""; // emojiPicker の中身をリセットする（新しく作り直すため）
+
+				// **1️⃣ 普通の絵文字の区切り線**
+				addSeparator("😀 絵文字");
+
+				// 普通の絵文字
+				emojis.forEach(emoji => {
+					const span = document.createElement("span"); // <span> 要素を作る
+					span.textContent = emoji; // 絵文字を <span> の中に入れる
+					span.classList.add("emoji"); // CSS でスタイルを適用するために emoji クラスを追加
+					span.addEventListener("click", () => insertEmoji(emoji)); // クリックしたら insertEmoji() を実行
+					emojiPicker.appendChild(span); // emojiPicker（絵文字一覧の div）の中に span を追加する
+				});
+
+				// **2️⃣ 自分のエモートの区切り線**
+				addSeparator("💬 三つ編みエモート");
+
+				// Twitchエモートを追加（自分の）
+				const myEmotes = await fetchTwitchEmotes();
+				myEmotes.forEach(emote => {
+					const img = document.createElement("img");
+            		img.src = emote.images.url_1x; // 小さいサイズのエモート
+            		img.alt = emote.name;
+            		img.title = emote.name; // ツールチップの表示名
+            		img.classList.add("emote"); // CSSでスタイル調整
+            		img.addEventListener("click", () => insertEmoji(img.src)); // クリックで挿入
+            		emojiPicker.appendChild(img);
+				});
+
+				//console.log("✅ エモートピッカーに 自分の Twitch エモートを追加！"); // デバッグ用
+
+				//Twitchエモートを追加（ユーザーの）
+				const yourEmotes = await fetchTwitchEmotesYour();
+				if (yourEmotes.length > 0) {
+					addSeparator(`🔖 ${chatName.value}エモート`); // **3️⃣ ユーザーのエモートの区切り線**
+					yourEmotes.forEach(emote => {
+						const img = document.createElement("img");
+						img.src = emote.images.url_1x;
+						img.alt = emote.name;
+						img.title = emote.name;
+						img.classList.add("emote");
+						img.addEventListener("click", () => insertEmoji(img.src));
+						emojiPicker.appendChild(img);
+					})
+					//console.log(`✅ エモートピッカーに ${chatName.value}の Twitch エモートを追加！`); // デバッグ用
+				} else {
+					console.log("⚠️ ユーザーエモートが空です。");
+				}
+
+				// **4️⃣ グローバルエモートの区切り線**
+				addSeparator("🌎 グローバルエモート");
+
+				// Twitchグローバルエモートを追加
+				const globalEmotes = await fetchGlobalEmotes();
+				globalEmotes.forEach(emote => {
+					const img = document.createElement("img");
+					img.src = emote.images.url_1x;
+					img.alt = emote.name;
+					img.title = emote.name;
+					img.classList.add("emote");
+					img.addEventListener("click", () => insertEmoji(img.src));
+					emojiPicker.appendChild(img);
+				});
+
+				//console.log("✅ エモートピッカーに グローバルエモートを追加！"); // デバッグ用
+			}
+			
+			// 絵文字を textarea に挿入
+			function insertEmoji(emoji) {
+				if (/^[\p{Emoji}\p{Extended_Pictographic}]+$/u.test(emoji)) {
+					chatPreview.innerText += emoji;
+				} else {
+					chatPreview.innerHTML += `<img src="${emoji}" alt="emote" class="chat-emote">`;
+				}
+				input.value = chatPreview.innerHTML; // `textarea` にも反映
+
+				// **カーソルを chatPreview の末尾に戻す**
+				const range = document.createRange();
+				const selection = window.getSelection();
+				range.selectNodeContents(chatPreview);
+				range.collapse(false); // 末尾に移動
+				selection.removeAllRanges();
+				selection.addRange(range);
+
+				chatPreview.focus(); // フォーカスを戻す
+			}
+			
+			// ボタンを押したら絵文字一覧を表示・非表示
+			emojiButton.addEventListener("click", (event) => {
+				createEmojiPicker(); // 関数を実行 絵文字リストを作成
+				// if 文を短くかいた 三項演算子（?:）を使った条件分岐
+				emojiPicker.style.display = emojiPicker.style.display === "flex" ? "none" : "flex";
+				// ツールチップを非表示にする
+				tooltipStyle.textContent = `
+					.emoji-button:hover::after,
+					.emoji-button:hover::before {
+						opacity: 0;
+						visibility: hidden;
+					}
+				`;
+			});
+			
+			// クリックで絵文字ピッカーを閉じる（ボタンとピッカー以外）＆ tooltip のスタイルを戻す
+			document.addEventListener("click", (event) => {
+				if (!emojiButton.contains(event.target) && !emojiPicker.contains(event.target)) {
+					emojiPicker.style.display = "none";
+					tooltipStyle.textContent = `
+						.emoji-button:hover::after,
+						.emoji-button:hover::before {
+							opacity: 1;
+							visibility: visible;
+						}
+					`;
+				}
+			});
+			
+			// テキストの幅を計算する関数
+			function getTextWidth(text, font) {
+				const canvas = document.createElement("canvas"); // canvas 要素を作成
+				const context = canvas.getContext("2d"); // 2Dコンテキスト（getContext("2d")を取得
+				context.font = font; // textarea のフォントを適用
+				return context.measureText(text).width; // リターンで「現在のフォント設定で text を描いた時の横幅」を返す
+			}
+			
+			// スマホ判定関数
+			function isMobile() {
+				return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+			}
+			
+			/*if (isMobile()) {
+				emojiButton.style.display = "none"; // スマホならボタンを非表示
+			}*/
+			
+			// 自動リサイズ関数
+			function adjustTextareaHeight() {
+				chatPreview.style.height = "39px"; // 一度リセットする
+				
+				const newLine = chatPreview.innerHTML.includes("<br>"); // 改行の確認。
+				const twoHeight = 47; // 2行分の高さ
+				let newHeight = chatPreview.scrollHeight; // 現在の高さ
+				
+				//console.log("現在の高さ:", newHeight); // 現在の高さを確認（デバッグ用）
+				//console.log("２行分の高さ:", twoHeight); // ２行分の高さを確認（デバッグ用）
+				
+				// textarea のスタイルを取得してフォント情報を取得
+				const chatPreviewStyle = window.getComputedStyle(chatPreview);
+				const font = `${chatPreviewStyle.fontSize} ${chatPreviewStyle.fontFamily}`;
+				
+				// 現在の入力テキストの幅を計算
+				const textWidth = getTextWidth(chatPreview.innerText, font); // HTMLのテキストをgetTextWidth() に渡す
+				//console.log("Text Width:", textWidth); // デバッグ用
+				
+				// textarea の padding を取得
+				const paddingLeft = parseFloat(chatPreviewStyle.paddingLeft);
+				const paddingRight = parseFloat(chatPreviewStyle.paddingRight);
+				const textPadding = paddingLeft + paddingRight; // 合計のpadding
+				const margin = 55;  // 余力の値（ピクセル）
+				
+				// テキスト幅にpadding分と余力分の数字を加える
+				const adjustedTextWidth = textWidth + textPadding + margin;
+				//console.log("Adjusted Text Width:", adjustedTextWidth); // デバッグ用
+				
+				// emojiボタンの左側の位置を取得
+				const emojiButtonLeft = emojiButton.getBoundingClientRect().left;
+				//console.log("emojiButton Left: ", emojiButtonLeft); // デバッグ用
+				
+				// PCかスマホか判定して、個別の条件で処理をさせる。スマホならemojiボタンの位置を考慮しない 
+				/*if (isMobile()) {
+					// もし折り返しが発生し2行分になったら
+					if (newHeight >= twoHeight) {
+						input.style.height = "89px"; // 4行分の高さに変更
+						messages.style.marginBottom = "70px"; // ul を４行分の高さ上げる
+						messages.scrollTo(0, messages.scrollHeight); // messages内のスクロールを一番下へ
+					} else {
+						// 元の値に戻す
+						messages.style.marginBottom = "23px";
+					}
+				} else {*/
+					 // PCならemojiボタンの位置を考慮する
+					 //もし折り返しが発生し2行分になる、あるいは文字がボタン左端の距離まできたら4行分の高さを確保
+					if (newHeight >= twoHeight || adjustedTextWidth >= emojiButtonLeft) {
+						chatPreview.style.height = "89px"; // 4行分の高さに変更
+						messages.style.marginBottom = "70px"; // ul を４行分の高さ上げる
+						messages.scrollTo(0, messages.scrollHeight); // messagesのスクロールを一番下へ
+						// 絵文字ボタンの位置を右下に調整する
+						emojiButton.style.top = "88%";
+						emojiButton.style.transform = "translateY(-88%)";
+					} else {
+						// 元の値に戻す
+						messages.style.marginBottom = "23px";
+						emojiButton.style.top = "9px";
+						emojiButton.style.transform = "none";
+					}
+				//}
+			
+				chatPreview.style.height = Math.min(chatPreview.scrollHeight, 205) + "px"; // 最大205pxまで拡大
+				
+				// PCかスマホか判定して、個別の条件でborder-radiusの値を変更する。スマホならemojiボタンの位置を考慮しない 
+				/*if (isMobile()) {
+					// もし改行がある or 現在の高さが２行分(49px)をこえたら、自動でborder-radiusの値を変更する。
+					if (newLine || newHeight >= twoHeight) {
+						input.style.borderRadius = "0.8rem"; // 改行あり → 0.8rem
+					} else {
+						input.style.borderRadius = "2rem"; // 改行なし → 2rem
+					}
+				} else {*/
+					// PCならemojiボタンの位置を考慮する
+					// 改行がある or 現在の高さが２行分(49px)になる or 文字がボタン左端の距離まできていたら値を変更する。
+					if (newLine || newHeight >= twoHeight || adjustedTextWidth >= emojiButtonLeft) {
+						chatPreview.style.borderRadius = "0.8rem"; // 改行あり → 0.8rem
+					} else {
+						chatPreview.style.borderRadius = "2rem"; // 改行なし → 2rem
+					}
+				}
+			//}
+			
+			// 入力時に高さを調整
+			chatPreview.addEventListener("input", () => {
+				if (!isComposing) {
+					canSubmit = true; // ここで送信OKにする
+  				}
+				adjustTextareaHeight();
+			});
+			
+			// `keyup` で IME確定直後の `keydown` を防ぐ
+			chatPreview.addEventListener("keyup", (event) => {
+    			if (event.key === "Enter" && !isComposing) {
+        			canSubmit = true;
+    			}
+			});
+
+			// シフト+エンターで改行、通常のエンターで送信
+			chatPreview.addEventListener("keydown", (event) => {
+				if (event.key === "Enter") {
+					if (isComposing || !canSubmit) return; // IME変換中または送信不可なら何もしない
+
+					event.preventDefault();
+					if (event.shiftKey) {
+						document.execCommand("insertLineBreak"); // シフト + エンターで改行
+						//console.log("✅ カーソル位置は改行後の直後になる！"); // デバッグ用
+					} else {
+						form.requestSubmit(); // エンターで送信
+					}
+				}
+			});
+			
+			// フォーム送信時の処理
+			form.addEventListener("submit", async (event) => {
+				event.preventDefault(); // ページ遷移を防ぐ
+
+				let messageText = chatPreview.innerText.trim(); // テキストのみ取得＆前後の空白を削除
+			    let messageHtml = chatPreview.innerHTML.trim(); // HTML全体を取得
+
+				// **前後の `<br>` を削除**
+				messageHtml = messageHtml.replace(/^(<br\s*\/?>)+|(<br\s*\/?>)+$/g, "");
+				// **前後のスペースも削除（空白だけの送信を防ぐ）**
+				messageHtml = messageHtml.replace(/^\s+|\s+$/g, "");
+				
+				input.value = messageHtml; // 前後の空白と改行\nと<br>を除去
+				const trimmedValue = input.value;
+
+				// ✅ 「改行を削除した状態で messageText が空かどうかを判定」
+				const hasText = messageText.replace(/\n/g, "").trim().length > 0;
+    			const hasEmote = chatPreview.querySelector("img");
+
+				if (hasText || hasEmote) {
+					console.log("🚀 送信前の messageHtml:", messageHtml); // デバッグ用
+					console.log("🚀 送信前の messageText:", messageText); // デバッグ用
+
+					try {
+						const formData = new FormData(form);
+						const name = formData.get("_name");
+						const message = formData.get("_message").trim();
+						const csrfToken = formData.get("_csrf");
+						//const icon = twitchUserInfo.profile_image_url;
+
+						console.log("📝 送信データ:", { name, message }); // (デバッグ用)
+
+						// サーバーへPOSTリクエストを送信（CSRFトークンをヘッダーに含める）
+						const response = await fetch('/submit', {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								"CSRF-Token": csrfToken  // ヘッダーにトークンを設定
+							},
+							body: JSON.stringify({ name, message })
+						});
+
+						const result = await response.json();
+						console.log("📝 Server response:", result);
+
+						// 送信後に新しい CSRF トークンを取得
+						await updateCsrfToken();
+
+					} catch (error) {
+						console.error("Error during form submission:", error);
+					}
+
+					console.log("送信されたメッセージ:", trimmedValue); // 送信内容を表示（デバッグ用）
+
+					const data = {
+						icon: twitchUserInfo?.profile_image_url || "/icon/profile_sample_image-300x300.jpg", // プロフィール画像（なければデフォ画像）
+						name: twitchUserInfo?.display_name || "匿名", // Twitchのディスプレイネーム（なければ「匿名」）
+						text: trimmedValue,
+					};
+					
+					//console.log("📤 送信データ:", data); // (デバッグ用)
+					socket.emit('chat message', data);
+					
+					chatPreview.innerHTML = ""; // 入力欄をクリア
+					chatPreview.style.height = "39px"; // 初期の高さに戻す
+					chatPreview.style.borderRadius = "2rem"; // 初期値に戻す
+					chatPreview.blur(); // フォーカスを外す（スマホならキーボードを閉じる）
+
+					emojiButton.style.top = "9px"; // 初期の高さに戻す
+					emojiButton.style.transform = "none"; // 初期値に戻す
+					messages.style.marginBottom = "23px"; // 初期に戻す
+					
+					// 送信ボタンの色をリセット
+					if (document.body.classList.contains("dark-mode")) {
+						sendImg.style.filter = 
+						"invert(99%) sepia(67%) saturate(429%) hue-rotate(195deg) brightness(116%) contrast(78%)";
+					} else {
+						sendImg.style.filter = 
+						"invert(22%) sepia(16%) saturate(4%) hue-rotate(315deg) brightness(102%) contrast(81%)";
+					}
+					// PCならフォーカスを戻す（スマホでは戻さない）
+					if (!isMobile()) {
+						setTimeout(() => chatPreview.focus(), 100);
+					}
+				}
+			});
+			
+			// 新しいメッセージがきた時の処理
+			socket.on('chat message', function(m) {
+				console.log("📩 クライアントで受信:", m);
+				// 投稿時間を取得する
+				let postTime = new Date().toLocaleString("en-US",{
+					timeZone: "Asia/Tokyo",
+					hour: "numeric",
+					minute: "numeric",
+					hour12: true
+				}); // 英語圏のロケール（例: en-US）を使いタイムゾーンで日本を明示的に指定
+				let item = document.createElement('li');
+				item.innerHTML = `
+					<span class="msg-icon"><img src="${m.icon}"></span>
+					<div class="msg-contents">
+						<time>${postTime}</time>
+						<span class="msg-name">${m.name}</span>
+						<span class="msg-text">${m.text}</span>
+					</div>
+				`;
+				messages.appendChild(item);
+				messages.scrollTo(0, messages.scrollHeight); // messages内のスクロールを一番下へ
+				onMessageSent(); // 送信するtimeの表示・非表示に対応する関数
+			});
+		</script>
+	</body>
+</html>
